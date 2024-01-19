@@ -1,3 +1,5 @@
+use std::io::Write;
+
 use itertools::Itertools;
 
 struct Player {
@@ -12,7 +14,7 @@ impl Player {
     }
 }
 
-#[derive(Eq, PartialEq)]
+#[derive(Eq, PartialEq, Clone, Copy, Debug)]
 enum CardSuit {
     Spades,
     Hearts,
@@ -37,6 +39,7 @@ enum CardRank {
     Ace
 }
 
+#[derive(Debug)]
 struct Card {
     suit: CardSuit,
     rank: CardRank
@@ -67,6 +70,44 @@ struct Deck {
 }
 
 impl Deck {
+    pub fn new() -> Deck {
+        Deck { cards: Vec::with_capacity(52) }
+    }
+
+    pub fn reset(&mut self) {
+        let all_ranks = [
+            CardRank::Two,
+            CardRank::Three,
+            CardRank::Four,
+            CardRank::Five,
+            CardRank::Six,
+            CardRank::Seven,
+            CardRank::Eight,
+            CardRank::Nine,
+            CardRank::Ten,
+            CardRank::Jack,
+            CardRank::Queen,
+            CardRank::King,
+            CardRank::Ace
+        ];
+
+        let all_suits = [
+            CardSuit::Hearts,
+            CardSuit::Spades, 
+            CardSuit::Clubs, 
+            CardSuit::Diamonds
+        ];
+
+        self.cards.clear();
+
+        for suit in all_suits {
+            for rank in all_ranks {
+                self.cards.push(Card { suit, rank });
+            }
+        }
+
+    }
+
     pub fn shuffle(&mut self) {
 
     }
@@ -108,8 +149,8 @@ enum HandRank {
     RoyalFlush
 }
 
-fn determine_hand_value(cards: &mut [Card]) -> HandRank {
-    let cards: &mut [Card; 5] = cards.try_into().expect("Hand is 5 cards.");
+fn determine_hand_value(cards: &mut [&Card]) -> HandRank {
+    let cards: &mut [&Card; 5] = cards.try_into().expect("Hand is 5 cards.");
 
     // Sort cards by rank in descending order.
     cards.sort();
@@ -146,10 +187,10 @@ fn determine_hand_value(cards: &mut [Card]) -> HandRank {
         HandRank::Straight
     }
     else {
-        let mut t: Vec<Vec<&Card>> = Vec::new();
+        let mut t: Vec<Vec<&&Card>> = Vec::new();
 
         // Group cards by rank.
-        for (_, group) in &cards.iter().group_by(|card| card.rank) {
+        for (_, group) in &cards.iter().group_by(|&&card| card.rank) {
             t.push(group.collect());
         }
 
@@ -174,17 +215,18 @@ fn determine_hand_value(cards: &mut [Card]) -> HandRank {
         }
     }
 }
-/*
+
 fn form_best_hand(community: &[Card], hole: &[Card])
 {
-    for c in community
+    for h in hole.iter().combinations(2) {
+        for mut c in community
         .iter()
-        .chain(hole.iter().combinations(2))
+        .chain(h.into_iter())
         .combinations(5) {
 
         }
+    }
 }
-*/
 
 #[cfg(test)]
 mod tests {
@@ -193,42 +235,42 @@ mod tests {
 
     #[test]
     fn hand_rankings() {
-        let mut hand = vec![
-            Card { suit: CardSuit::Hearts, rank: CardRank::Three },
-            Card { suit: CardSuit::Hearts, rank: CardRank::Four },
-            Card { suit: CardSuit::Hearts, rank: CardRank::Five },
-            Card { suit: CardSuit::Hearts, rank: CardRank::Six },
-            Card { suit: CardSuit::Hearts, rank: CardRank::Seven },
+        let mut hand = [
+            &Card { suit: CardSuit::Hearts, rank: CardRank::Three },
+            &Card { suit: CardSuit::Hearts, rank: CardRank::Four },
+            &Card { suit: CardSuit::Hearts, rank: CardRank::Five },
+            &Card { suit: CardSuit::Hearts, rank: CardRank::Six },
+            &Card { suit: CardSuit::Hearts, rank: CardRank::Seven },
         ];
 
         assert_eq!(determine_hand_value(&mut hand), HandRank::StraightFlush);
 
-        let mut hand = vec![
-            Card { suit: CardSuit::Hearts, rank: CardRank::Three },
-            Card { suit: CardSuit::Diamonds, rank: CardRank::Four },
-            Card { suit: CardSuit::Spades, rank: CardRank::Seven },
-            Card { suit: CardSuit::Clubs, rank: CardRank::Seven },
-            Card { suit: CardSuit::Hearts, rank: CardRank::Seven },
+        let mut hand = [
+            &Card { suit: CardSuit::Hearts, rank: CardRank::Three },
+            &Card { suit: CardSuit::Diamonds, rank: CardRank::Four },
+            &Card { suit: CardSuit::Spades, rank: CardRank::Seven },
+            &Card { suit: CardSuit::Clubs, rank: CardRank::Seven },
+            &Card { suit: CardSuit::Hearts, rank: CardRank::Seven },
         ];
 
         assert_eq!(determine_hand_value(&mut hand), HandRank::ThreeOfAKind);
 
-        let mut hand = vec![
-            Card { suit: CardSuit::Hearts, rank: CardRank::Four },
-            Card { suit: CardSuit::Diamonds, rank: CardRank::Four },
-            Card { suit: CardSuit::Spades, rank: CardRank::Seven },
-            Card { suit: CardSuit::Clubs, rank: CardRank::Seven },
-            Card { suit: CardSuit::Hearts, rank: CardRank::Seven },
+        let mut hand = [
+            &Card { suit: CardSuit::Hearts, rank: CardRank::Four },
+            &Card { suit: CardSuit::Diamonds, rank: CardRank::Four },
+            &Card { suit: CardSuit::Spades, rank: CardRank::Seven },
+            &Card { suit: CardSuit::Clubs, rank: CardRank::Seven },
+            &Card { suit: CardSuit::Hearts, rank: CardRank::Seven },
         ];
 
         assert_eq!(determine_hand_value(&mut hand), HandRank::FullHouse);
 
-        let mut hand = vec![
-            Card { suit: CardSuit::Hearts, rank: CardRank::Four },
-            Card { suit: CardSuit::Diamonds, rank: CardRank::Five },
-            Card { suit: CardSuit::Spades, rank: CardRank::Nine },
-            Card { suit: CardSuit::Clubs, rank: CardRank::Jack },
-            Card { suit: CardSuit::Hearts, rank: CardRank::Two },
+        let mut hand = [
+            &Card { suit: CardSuit::Hearts, rank: CardRank::Four },
+            &Card { suit: CardSuit::Diamonds, rank: CardRank::Five },
+            &Card { suit: CardSuit::Spades, rank: CardRank::Nine },
+            &Card { suit: CardSuit::Clubs, rank: CardRank::Jack },
+            &Card { suit: CardSuit::Hearts, rank: CardRank::Two },
         ];
 
         assert_eq!(determine_hand_value(&mut hand), HandRank::HighCard);
