@@ -266,7 +266,7 @@ mod tests {
     use crate::{Card, CardRank, CardSuit, HandCategory, Hand};
 
     #[test]
-    fn hand_rankings() {
+    fn hand_categorization() {
         let hand = Hand::new([
             Card { suit: CardSuit::Hearts, rank: CardRank::Jack },
             Card { suit: CardSuit::Hearts, rank: CardRank::Ten },
@@ -389,6 +389,27 @@ mod tests {
         ]);
 
         assert_eq!(hand.category, HandCategory::HighCard);
+    }
+
+    #[test]
+    fn hand_comparison() {
+        let king_high = Hand::new([
+            Card { suit: CardSuit::Hearts, rank: CardRank::Four },
+            Card { suit: CardSuit::Diamonds, rank: CardRank::Five },
+            Card { suit: CardSuit::Spades, rank: CardRank::Three },
+            Card { suit: CardSuit::Clubs, rank: CardRank::King },
+            Card { suit: CardSuit::Hearts, rank: CardRank::Two },
+        ]);
+
+        let jack_high = Hand::new([
+            Card { suit: CardSuit::Hearts, rank: CardRank::Four },
+            Card { suit: CardSuit::Diamonds, rank: CardRank::Five },
+            Card { suit: CardSuit::Spades, rank: CardRank::Nine },
+            Card { suit: CardSuit::Clubs, rank: CardRank::Jack },
+            Card { suit: CardSuit::Hearts, rank: CardRank::Two },
+        ]);
+
+        assert!(jack_high < king_high);
     }
 
 }
