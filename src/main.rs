@@ -268,6 +268,16 @@ mod tests {
     #[test]
     fn hand_rankings() {
         let hand = Hand::new([
+            Card { suit: CardSuit::Hearts, rank: CardRank::Jack },
+            Card { suit: CardSuit::Hearts, rank: CardRank::Ten },
+            Card { suit: CardSuit::Hearts, rank: CardRank::Ace },
+            Card { suit: CardSuit::Hearts, rank: CardRank::King },
+            Card { suit: CardSuit::Hearts, rank: CardRank::Queen },
+        ]);
+
+        assert_eq!(hand.category, HandCategory::RoyalFlush);
+
+        let hand = Hand::new([
             Card { suit: CardSuit::Hearts, rank: CardRank::Three },
             Card { suit: CardSuit::Hearts, rank: CardRank::Four },
             Card { suit: CardSuit::Hearts, rank: CardRank::Five },
@@ -278,11 +288,54 @@ mod tests {
         assert_eq!(hand.category, HandCategory::StraightFlush);
 
         let hand = Hand::new([
+            Card { suit: CardSuit::Hearts, rank: CardRank::Three },
+            Card { suit: CardSuit::Hearts, rank: CardRank::Two },
+            Card { suit: CardSuit::Hearts, rank: CardRank::Five },
+            Card { suit: CardSuit::Hearts, rank: CardRank::Ace },
+            Card { suit: CardSuit::Hearts, rank: CardRank::Seven },
+        ]);
+
+        assert_eq!(hand.category, HandCategory::Flush);
+
+        let hand = Hand::new([
+            Card { suit: CardSuit::Diamonds, rank: CardRank::Two },
+            Card { suit: CardSuit::Hearts, rank: CardRank::Jack },
+            Card { suit: CardSuit::Clubs, rank: CardRank::Two },
+            Card { suit: CardSuit::Spades, rank: CardRank::Two },
+            Card { suit: CardSuit::Hearts, rank: CardRank::Two },
+        ]);
+
+        assert_eq!(hand.category, HandCategory::FourOfAKind);
+
+        // Five-high straight.
+        let hand = Hand::new([
             Card { suit: CardSuit::Hearts, rank: CardRank::Ace },
             Card { suit: CardSuit::Clubs, rank: CardRank::Four },
             Card { suit: CardSuit::Spades, rank: CardRank::Five },
             Card { suit: CardSuit::Hearts, rank: CardRank::Three },
             Card { suit: CardSuit::Hearts, rank: CardRank::Two },
+        ]);
+
+        assert_eq!(hand.category, HandCategory::Straight);
+
+        // Ace-high straight.
+        let hand = Hand::new([
+            Card { suit: CardSuit::Hearts, rank: CardRank::Jack },
+            Card { suit: CardSuit::Hearts, rank: CardRank::Ten },
+            Card { suit: CardSuit::Hearts, rank: CardRank::Ace },
+            Card { suit: CardSuit::Spades, rank: CardRank::Queen },
+            Card { suit: CardSuit::Clubs, rank: CardRank::King },
+        ]);
+
+        assert_eq!(hand.category, HandCategory::Straight);
+
+        // Eight-high straight.
+        let hand = Hand::new([
+            Card { suit: CardSuit::Hearts, rank: CardRank::Eight },
+            Card { suit: CardSuit::Spades, rank: CardRank::Six },
+            Card { suit: CardSuit::Hearts, rank: CardRank::Five },
+            Card { suit: CardSuit::Hearts, rank: CardRank::Four },
+            Card { suit: CardSuit::Clubs, rank: CardRank::Seven },
         ]);
 
         assert_eq!(hand.category, HandCategory::Straight);
@@ -306,6 +359,26 @@ mod tests {
         ]);
 
         assert_eq!(hand.category, HandCategory::FullHouse);
+
+        let hand = Hand::new([
+            Card { suit: CardSuit::Hearts, rank: CardRank::Four },
+            Card { suit: CardSuit::Diamonds, rank: CardRank::Five },
+            Card { suit: CardSuit::Spades, rank: CardRank::Five },
+            Card { suit: CardSuit::Clubs, rank: CardRank::Jack },
+            Card { suit: CardSuit::Hearts, rank: CardRank::Jack },
+        ]);
+
+        assert_eq!(hand.category, HandCategory::TwoPair);
+
+        let hand = Hand::new([
+            Card { suit: CardSuit::Hearts, rank: CardRank::Four },
+            Card { suit: CardSuit::Diamonds, rank: CardRank::Five },
+            Card { suit: CardSuit::Spades, rank: CardRank::Nine },
+            Card { suit: CardSuit::Clubs, rank: CardRank::Jack },
+            Card { suit: CardSuit::Hearts, rank: CardRank::Jack },
+        ]);
+
+        assert_eq!(hand.category, HandCategory::Pair);
 
         let hand = Hand::new([
             Card { suit: CardSuit::Hearts, rank: CardRank::Four },
