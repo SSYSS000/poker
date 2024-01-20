@@ -1,5 +1,3 @@
-use std::io::Write;
-
 use itertools::Itertools;
 
 struct Player {
@@ -39,7 +37,7 @@ enum CardRank {
     Ace
 }
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 struct Card {
     suit: CardSuit,
     rank: CardRank
@@ -136,7 +134,7 @@ struct Tournament {
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug)]
-enum HandRank {
+enum HandCategory {
     HighCard,
     Pair,
     TwoPair,
@@ -149,69 +147,104 @@ enum HandRank {
     RoyalFlush
 }
 
-fn determine_hand_value(cards: &mut [&Card]) -> HandRank {
-    let cards: &mut [&Card; 5] = cards.try_into().expect("Hand is 5 cards.");
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
+struct Hand {
+    category: HandCategory,
+    // The order of 'cards' is significant in comparing the ranks of two hands.
+    // The card(s) that define the hand category come first and in descending
+    // rank order. If there are one or more kickers, they follow the
+    // aforementioned cards in descending rank order.
+    // The sorting method ranks ace lowest if doing so results
+    // in a stronger hand (e.g. a "five-high straight" over an "ace high").
+    cards: [Card; 5]
+}
 
-    // Sort cards by rank in descending order.
-    cards.sort();
-    cards.reverse();
+impl Hand {
+    pub fn new(mut cards: [Card; 5]) -> Hand {
+        Hand {
+            category: Self::sort_and_categorize(&mut cards),
+            cards: cards
+        }
+    }
 
-    // All cards have same suit.
-    let is_flush = cards
-        .iter()
-        .all(|card| card.suit == cards[0].suit);
+    fn sort_and_categorize(cards: &mut [Card; 5]) -> HandCategory {
+        cards.sort();
+        cards.reverse();
 
-    let is_straight = {
-        cards
-            .iter()
-            .map(|card| card.rank as i32 - cards[4].rank as i32)
-            .rev()
-            .eq(0..5)
-    };
+        // All cards have same suit.
+        let is_flush = cards.iter()
+            .all(|card| card.suit == cards[0].suit);
 
-    if is_flush {
-        let is_royal = cards.iter()
-            .all(|card| card.rank >= CardRank::Ten);
+        let is_straight = {
+            let mut sub = [0i8; 4];
 
-        if is_royal {
-            HandRank::RoyalFlush
+            // Compare the 4 highest cards to the lowest ranking card.
+            for i in 0..sub.len() {
+                sub[i] = cards[i].rank as i8 - cards[4].rank as i8;
+            }
+
+            if sub.eq(&[4, 3, 2, 1]) {
+                true
+            }
+            else if sub.eq(&[12, 3, 2, 1]) {
+                // Five-high straight.
+                cards.rotate_left(1);
+                true
+            }
+            else {
+                false
+            }
+        };
+
+        if is_flush {
+            let is_royal = cards.iter()
+                .all(|card| card.rank >= CardRank::Ten);
+
+            if is_royal {
+                HandCategory::RoyalFlush
+            }
+            else if is_straight {
+                HandCategory::StraightFlush
+            }
+            else {
+                HandCategory::Flush
+            }
         }
         else if is_straight {
-            HandRank::StraightFlush
+            HandCategory::Straight
         }
         else {
-            HandRank::Flush
-        }
-    }
-    else if is_straight {
-        HandRank::Straight
-    }
-    else {
-        let mut t: Vec<Vec<&&Card>> = Vec::new();
+            let mut t: Vec<Vec<Card>> = Vec::with_capacity(5);
 
-        // Group cards by rank.
-        for (_, group) in &cards.iter().group_by(|&&card| card.rank) {
-            t.push(group.collect());
-        }
+            // Group cards by rank.
+            for (_, group) in &(*cards).into_iter().group_by(|card| card.rank) {
+                t.push(group.collect());
+            }
 
-        // Sort groups by their lengths in descending order.
-        t.sort_by_key(|k| k.len());
-        t.reverse();
+            // Sort groups by their lengths in descending order.
+            t.sort_by_key(|k| k.len());
+            t.reverse();
 
-        match t[0].len() {
-            4 => HandRank::FourOfAKind,
+            // Copy the order.
+            for (i, &card) in t.iter().flatten().enumerate() {
+                cards[i] = card;
+            }
 
-            3 => match t[1].len() {
-                2 => HandRank::FullHouse,
-                _ => HandRank::ThreeOfAKind
-            },
+            match t[0].len() {
+                4 => HandCategory::FourOfAKind,
 
-            2 => match t[1].len() {
-                2 => HandRank::TwoPair,
-                _ => HandRank::Pair
-            },
+                3 => match t[1].len() {
+                    2 => HandCategory::FullHouse,
+                    _ => HandCategory::ThreeOfAKind
+                },
 
-            _ => HandRank::HighCard
+                2 => match t[1].len() {
+                    2 => HandCategory::TwoPair,
+                    _ => HandCategory::Pair
+                },
+
+                _ => HandCategory::HighCard
+            }
         }
     }
 }
@@ -230,50 +263,59 @@ fn form_best_hand(community: &[Card], hole: &[Card])
 
 #[cfg(test)]
 mod tests {
-    use crate::determine_hand_value;
-    use crate::{Card, CardRank, CardSuit, HandRank};
+    use crate::{Card, CardRank, CardSuit, HandCategory, Hand};
 
     #[test]
     fn hand_rankings() {
-        let mut hand = [
-            &Card { suit: CardSuit::Hearts, rank: CardRank::Three },
-            &Card { suit: CardSuit::Hearts, rank: CardRank::Four },
-            &Card { suit: CardSuit::Hearts, rank: CardRank::Five },
-            &Card { suit: CardSuit::Hearts, rank: CardRank::Six },
-            &Card { suit: CardSuit::Hearts, rank: CardRank::Seven },
-        ];
+        let hand = Hand::new([
+            Card { suit: CardSuit::Hearts, rank: CardRank::Three },
+            Card { suit: CardSuit::Hearts, rank: CardRank::Four },
+            Card { suit: CardSuit::Hearts, rank: CardRank::Five },
+            Card { suit: CardSuit::Hearts, rank: CardRank::Six },
+            Card { suit: CardSuit::Hearts, rank: CardRank::Seven },
+        ]);
 
-        assert_eq!(determine_hand_value(&mut hand), HandRank::StraightFlush);
+        assert_eq!(hand.category, HandCategory::StraightFlush);
 
-        let mut hand = [
-            &Card { suit: CardSuit::Hearts, rank: CardRank::Three },
-            &Card { suit: CardSuit::Diamonds, rank: CardRank::Four },
-            &Card { suit: CardSuit::Spades, rank: CardRank::Seven },
-            &Card { suit: CardSuit::Clubs, rank: CardRank::Seven },
-            &Card { suit: CardSuit::Hearts, rank: CardRank::Seven },
-        ];
+        let hand = Hand::new([
+            Card { suit: CardSuit::Hearts, rank: CardRank::Ace },
+            Card { suit: CardSuit::Clubs, rank: CardRank::Four },
+            Card { suit: CardSuit::Spades, rank: CardRank::Five },
+            Card { suit: CardSuit::Hearts, rank: CardRank::Three },
+            Card { suit: CardSuit::Hearts, rank: CardRank::Two },
+        ]);
 
-        assert_eq!(determine_hand_value(&mut hand), HandRank::ThreeOfAKind);
+        assert_eq!(hand.category, HandCategory::Straight);
 
-        let mut hand = [
-            &Card { suit: CardSuit::Hearts, rank: CardRank::Four },
-            &Card { suit: CardSuit::Diamonds, rank: CardRank::Four },
-            &Card { suit: CardSuit::Spades, rank: CardRank::Seven },
-            &Card { suit: CardSuit::Clubs, rank: CardRank::Seven },
-            &Card { suit: CardSuit::Hearts, rank: CardRank::Seven },
-        ];
+        let hand = Hand::new([
+            Card { suit: CardSuit::Hearts, rank: CardRank::Three },
+            Card { suit: CardSuit::Diamonds, rank: CardRank::Four },
+            Card { suit: CardSuit::Spades, rank: CardRank::Seven },
+            Card { suit: CardSuit::Clubs, rank: CardRank::Seven },
+            Card { suit: CardSuit::Hearts, rank: CardRank::Seven },
+        ]);
 
-        assert_eq!(determine_hand_value(&mut hand), HandRank::FullHouse);
+        assert_eq!(hand.category, HandCategory::ThreeOfAKind);
 
-        let mut hand = [
-            &Card { suit: CardSuit::Hearts, rank: CardRank::Four },
-            &Card { suit: CardSuit::Diamonds, rank: CardRank::Five },
-            &Card { suit: CardSuit::Spades, rank: CardRank::Nine },
-            &Card { suit: CardSuit::Clubs, rank: CardRank::Jack },
-            &Card { suit: CardSuit::Hearts, rank: CardRank::Two },
-        ];
+        let hand = Hand::new([
+            Card { suit: CardSuit::Hearts, rank: CardRank::Four },
+            Card { suit: CardSuit::Diamonds, rank: CardRank::Four },
+            Card { suit: CardSuit::Spades, rank: CardRank::Seven },
+            Card { suit: CardSuit::Clubs, rank: CardRank::Seven },
+            Card { suit: CardSuit::Hearts, rank: CardRank::Seven },
+        ]);
 
-        assert_eq!(determine_hand_value(&mut hand), HandRank::HighCard);
+        assert_eq!(hand.category, HandCategory::FullHouse);
+
+        let hand = Hand::new([
+            Card { suit: CardSuit::Hearts, rank: CardRank::Four },
+            Card { suit: CardSuit::Diamonds, rank: CardRank::Five },
+            Card { suit: CardSuit::Spades, rank: CardRank::Nine },
+            Card { suit: CardSuit::Clubs, rank: CardRank::Jack },
+            Card { suit: CardSuit::Hearts, rank: CardRank::Two },
+        ]);
+
+        assert_eq!(hand.category, HandCategory::HighCard);
     }
 
 }
