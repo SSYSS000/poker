@@ -221,9 +221,11 @@ impl Hand {
                 t.push(group.collect());
             }
 
-            // Sort groups by their lengths in descending order.
-            t.sort_by_key(|k| k.len());
-            t.reverse();
+            // Sort by group length and then card rank.
+            t.sort_by(|a, b| match b.len().cmp(&a.len()) {
+                std::cmp::Ordering::Equal => b[0].rank.cmp(&a[0].rank),
+                o => o
+            });
 
             // Copy the order.
             for (i, &card) in t.iter().flatten().enumerate() {
