@@ -20,6 +20,19 @@ enum CardSuit {
     Diamonds
 }
 
+impl std::fmt::Display for CardSuit {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        use CardSuit::*;
+
+        match self {
+            Spades   => '♠',
+            Hearts   => '♥',
+            Clubs    => '♣',
+            Diamonds => '♦'
+        }.fmt(f)
+    }
+}
+
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone, Copy)]
 enum CardRank {
     Two,
@@ -37,10 +50,38 @@ enum CardRank {
     Ace
 }
 
+impl std::fmt::Display for CardRank {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        use CardRank::*;
+
+        match self {
+            Two   => "2",
+            Three => "3",
+            Four  => "4",
+            Five  => "5",
+            Six   => "6",
+            Seven => "7",
+            Eight => "8",
+            Nine  => "9",
+            Ten   => "10",
+            Jack  => "J",
+            Queen => "Q",
+            King  => "K",
+            Ace   => "A"
+        }.fmt(f)
+    }
+}
+
 #[derive(Clone, Copy, Debug)]
 struct Card {
     suit: CardSuit,
     rank: CardRank
+}
+
+impl std::fmt::Display for Card {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} {: >2}", self.suit, self.rank)
+    }
 }
 
 impl Ord for Card {
