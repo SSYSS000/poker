@@ -109,11 +109,17 @@ struct Deck {
 }
 
 impl Deck {
-    pub fn new() -> Deck {
+    pub fn empty() -> Deck {
         Deck { cards: Vec::with_capacity(52) }
     }
 
-    pub fn reset(&mut self) {
+    pub fn generate() -> Deck {
+        let mut deck = Deck::empty();
+        deck.regenerate();
+        deck
+    }
+
+    pub fn regenerate(&mut self) {
         let all_ranks = [
             CardRank::Two,
             CardRank::Three,
@@ -145,10 +151,12 @@ impl Deck {
             }
         }
 
+        self.shuffle();
     }
 
     pub fn shuffle(&mut self) {
-
+        use rand::seq::SliceRandom;
+        self.cards.shuffle(&mut rand::thread_rng());
     }
 
     pub fn draw(&mut self) -> Option<Card> {
