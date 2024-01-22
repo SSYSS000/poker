@@ -251,16 +251,24 @@ impl Hand {
     }
 }
 
-fn form_best_hand(community: &[Card], hole: &[Card])
+fn form_best_hand(community: &[Card], hole: &[Card]) -> Option<Hand>
 {
-    for h in hole.iter().combinations(2) {
-        for mut c in community
-        .iter()
-        .chain(h.into_iter())
-        .combinations(5) {
+    let mut hands: Vec<Hand> = Vec::new();
 
-        }
+    for h in hole.iter().copied().combinations(2) {
+        hands.push(
+            community
+            .iter()
+            .copied()
+            .chain(h.into_iter())
+            .combinations(5)
+            .map(|cards| Hand::new(cards.try_into().unwrap()))
+            .max()
+            .unwrap()
+        );
     }
+
+    hands.into_iter().max()
 }
 
 #[cfg(test)]
