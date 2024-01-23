@@ -80,7 +80,7 @@ struct Card {
 
 impl std::fmt::Display for Card {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} {: >2}", self.suit, self.rank)
+        write!(f, "[{} {: >2}]", self.suit, self.rank)
     }
 }
 
